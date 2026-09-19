@@ -25,7 +25,8 @@ export type Identity = {
 
 export type PeerMsg =
   | { t: "snap"; cards: Card[] }
-  | { t: "put"; card: Card };
+  | { t: "put"; card: Card }
+  | { t: "hello"; identity: Identity };
 
 export const COLUMN_INDEX: Record<ColumnId, number> = {
   todo: 0,

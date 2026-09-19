@@ -7,17 +7,14 @@ import {
 } from "react";
 import { Plus, Share, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { avatarTone, initials } from "@/lib/board/avatar";
 import { cardsInColumn, visibleCount } from "@/lib/board/merge";
 import { useBoardStore } from "@/lib/board/store";
-import { COLUMNS, COLUMN_INDEX, type Card, type ColumnId } from "@/lib/board/types";
+import { COLUMNS, COLUMN_INDEX, isColumnId, type Card, type ColumnId } from "@/lib/board/types";
 import { livePeers, useBoardSync } from "@/lib/board/use-sync";
 import { cn } from "@/lib/utils";
 import { CardFace } from "./card-face";
 import { EditorSheet, type EditorState } from "./editor";
-import { Sheet } from "./sheet";
+import { PeopleSheet } from "./people-sheet";
 
 type DragState = {
   id: string;
@@ -48,7 +45,8 @@ export function Kanban({
   onLeave: () => void;
   onNotify: (message: string) => void;
 }) {
-  const { p2p, publish } = useBoardSync(room, name);
+  const identity = useBoardStore((s) => s.identity) ?? { id: "local", name };
+  const { p2p, publish, pending, rows } = useBoardSync(room, identity);
   const cards = useBoardStore((s) => s.cards);
   const activeColumn = useBoardStore((s) => s.activeColumn);
   const setActiveColumn = useBoardStore((s) => s.setActiveColumn);
@@ -102,8 +100,8 @@ export function Kanban({
 
   const publishMove = useCallback(
     (id: string, column: ColumnId, index: number) => {
-      const card = moveCard(id, column, index);
-      if (card) publish(card);
+      const touched = moveCard(id, column, index);
+      for (const card of touched) publish(card);
     },
     [moveCard, publish],
   );
@@ -114,8 +112,8 @@ export function Kanban({
       let overColumn = useBoardStore.getState().activeColumn;
       for (const el of stack) {
         if (!(el instanceof HTMLElement)) continue;
-        const col = el.dataset.dropCol as ColumnId | undefined;
-        if (col) {
+        const col = el.dataset.dropCol;
+        if (col && isColumnId(col)) {
           overColumn = col;
           break;
         }
@@ -125,7 +123,6 @@ export function Kanban({
         (c) => c.id !== cardId,
       ).length;
       if (overColumn === useBoardStore.getState().activeColumn && nodes) {
-        insertIndex = insertIndex;
         let seen = 0;
         let found = insertIndex;
         nodes.forEach((node) => {
@@ -306,11 +303,13 @@ export function Kanban({
           <p className="text-caption font-medium uppercase tracking-[0.14em] text-muted">Slip</p>
           <h1 className="truncate text-2xl font-semibold tracking-tight">{room}</h1>
           <p className="mt-0.5 text-caption text-muted">
-            {liveCount === 0
-              ? p2p.joined
-                ? "Just you · invite someone"
-                : "Connecting"
-              : `${liveCount} live · peer sync on`}
+            {pending > 0 && liveCount === 0
+              ? "Saved here · waiting to sync"
+              : liveCount === 0
+                ? p2p.joined
+                  ? "Just you · invite someone"
+                  : "Connecting"
+                : `${liveCount} live · peer sync on`}
           </p>
         </div>
         <div className="flex items-center gap-1">
@@ -478,7 +477,7 @@ export function Kanban({
         onSave={(input) => {
           const card = upsertCard(input);
           setEditor(null);
-          publish(card);
+          if (card) publish(card);
         }}
         onDelete={(id) => {
           const card = deleteCard(id);
@@ -487,67 +486,20 @@ export function Kanban({
         }}
       />
 
-      <Sheet open={peopleOpen} onClose={() => setPeopleOpen(false)} labelledBy="people-title">
-        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 pb-6 pt-2">
-          <h2 id="people-title" className="text-xl font-semibold tracking-tight">
-            Room {room}
-          </h2>
-
-          <div className="space-y-2">
-            <Label htmlFor="rename">Your name</Label>
-            <div className="flex gap-2">
-              <Input
-                id="rename"
-                value={draftName}
-                maxLength={24}
-                onChange={(e) => setDraftName(e.target.value)}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="shrink-0"
-                disabled={!draftName.trim()}
-                onClick={() => {
-                  onRename(draftName);
-                  onNotify("Name updated");
-                }}
-              >
-                Save
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-caption font-medium text-muted">On this board</p>
-            <ul className="divide-y divide-border rounded-lg bg-elevated px-1">
-              <PeerRow name={name} you status="connected" />
-              {p2p.peers.map((peer) => (
-                <PeerRow
-                  key={peer.id}
-                  name={peer.name || "Guest"}
-                  status={peer.connectionState}
-                  rtt={peer.rttMs}
-                />
-              ))}
-            </ul>
-          </div>
-
-          <Button variant="outline" onClick={() => void shareRoom()}>
-            <Share className="size-4" />
-            Share invite
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setPeopleOpen(false);
-              onLeave();
-            }}
-          >
-            Leave board
-          </Button>
-        </div>
-      </Sheet>
+      <PeopleSheet
+        open={peopleOpen}
+        room={room}
+        draftName={draftName}
+        rows={rows}
+        onDraftName={setDraftName}
+        onSaveName={() => {
+          onRename(draftName);
+          onNotify("Name updated");
+        }}
+        onShare={() => void shareRoom()}
+        onLeave={onLeave}
+        onClose={() => setPeopleOpen(false)}
+      />
     </div>
   );
 }
@@ -568,54 +520,5 @@ function EmptyColumn({ column, onAdd }: { column: ColumnId; onAdd: () => void })
         Add a card
       </button>
     </div>
-  );
-}
-
-function PeerRow({
-  name,
-  you,
-  status,
-  rtt,
-}: {
-  name: string;
-  you?: boolean;
-  status: string;
-  rtt?: number | null;
-}) {
-  const live = status === "connected";
-  const failed = status === "failed" || status === "closed";
-  return (
-    <li className="flex items-center gap-3 px-3 py-3">
-      <span
-        className="flex size-9 items-center justify-center rounded-full text-caption font-semibold text-fg"
-        style={{ background: avatarTone(name) }}
-      >
-        {initials(name)}
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium">
-          {name}
-          {you ? <span className="text-muted"> · you</span> : null}
-        </p>
-        <p className="text-caption text-subtle">
-          {you
-            ? "This device"
-            : live
-              ? rtt != null
-                ? `${rtt}ms`
-                : "Connected"
-              : failed
-                ? "Can't reach"
-                : "Connecting"}
-        </p>
-      </div>
-      <span
-        className={cn(
-          "size-2 rounded-full",
-          live || you ? "bg-accent" : failed ? "bg-danger" : "bg-subtle",
-        )}
-        aria-hidden="true"
-      />
-    </li>
   );
 }

@@ -61,14 +61,14 @@ export function SlipApp({ roomFromUrl }: { roomFromUrl?: string }) {
           />
         ) : (
           <Kanban
-            key={`${room}:${identity.name}`}
+            key={room}
             room={room}
             name={identity.name}
             onRename={(next) => setName(next)}
             onLeave={() => {
               leaveBoard();
               setLastRoom(null);
-              void navigate({ to: "/", search: { room: undefined } });
+              void navigate({ to: "/", search: {} });
             }}
             onNotify={setToast}
           />

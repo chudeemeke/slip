@@ -79,6 +79,7 @@ export function EditorSheet({
             placeholder="What needs doing?"
             autoComplete="off"
             enterKeyHint="done"
+            maxLength={200}
           />
         </div>
 
@@ -89,6 +90,7 @@ export function EditorSheet({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Optional notes"
+            maxLength={4000}
           />
         </div>
 

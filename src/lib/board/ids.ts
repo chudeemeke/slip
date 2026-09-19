@@ -20,3 +20,7 @@ export function parseRoomCode(input: string): string | null {
 export function isRoomCode(value: string): boolean {
   return /^[A-Z0-9]{6}$/.test(value);
 }
+
+export function entityId(prefix: string): string {
+  return `${prefix}-${Math.random().toString(36).slice(2, 10)}${Date.now().toString(36).slice(-3)}`;
+}
