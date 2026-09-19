@@ -1,0 +1,173 @@
+@import "tailwindcss";
+
+@theme {
+  --color-studio: #070708;
+  --color-bg: #0c0c0e;
+  --color-surface: #161618;
+  --color-elevated: #1c1c1e;
+  --color-card: #242426;
+  --color-fg: #f2f1ee;
+  --color-muted: #8e8e93;
+  --color-subtle: #636366;
+  --color-accent: #8eb8a8;
+  --color-accent-fg: #0c0c0e;
+  --color-border: rgb(242 241 238 / 0.1);
+  --color-border-strong: rgb(242 241 238 / 0.18);
+  --color-danger: #e07a6a;
+  --color-lane-todo: #9aa3ad;
+  --color-lane-doing: #8eb8a8;
+  --color-lane-done: #7d9a8c;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
+    system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI",
+    system-ui, sans-serif;
+
+  --text-caption: 0.8125rem;
+  --text-callout: 0.9375rem;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 28px;
+  --radius-2xl: 36px;
+
+  --shadow-card: 0 0 0 1px rgb(255 255 255 / 0.06), 0 8px 24px rgb(0 0 0 / 0.28);
+  --shadow-lift: 0 0 0 1px rgb(255 255 255 / 0.1), 0 18px 40px rgb(0 0 0 / 0.45);
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-snappy: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: var(--color-studio);
+    color: var(--color-fg);
+  }
+
+  html,
+  body,
+  #app {
+    min-height: 100dvh;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--color-studio);
+    color: var(--color-fg);
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+    font-family: var(--font-display);
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.studio {
+  min-height: 100dvh;
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  background: var(--color-studio);
+}
+
+.phone {
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  height: 100svh;
+  background: var(--color-bg);
+  color: var(--color-fg);
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.phone-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.phone-island,
+.phone-home {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .studio {
+    background:
+      radial-gradient(ellipse 70% 50% at 50% 42%, #121214 0%, var(--color-studio) 70%);
+  }
+
+  .phone {
+    width: 390px;
+    height: 844px;
+    max-height: calc(100dvh - 32px);
+    border-radius: 54px;
+    box-shadow:
+      0 0 0 1px #2c2c30,
+      0 0 0 9px #0f0f11,
+      0 28px 80px rgb(0 0 0 / 0.55);
+  }
+
+  .phone-island {
+    display: block;
+    position: absolute;
+    top: 11px;
+    left: 50%;
+    z-index: 40;
+    width: 118px;
+    height: 34px;
+    transform: translateX(-50%);
+    background: #000;
+    border-radius: 999px;
+  }
+
+  .phone-home {
+    display: block;
+    position: absolute;
+    bottom: 8px;
+    left: 50%;
+    z-index: 40;
+    width: 128px;
+    height: 5px;
+    transform: translateX(-50%);
+    background: rgb(255 255 255 / 0.3);
+    border-radius: 999px;
+  }
+
+  .phone-screen {
+    padding-top: 52px;
+    padding-bottom: 22px;
+  }
+}
