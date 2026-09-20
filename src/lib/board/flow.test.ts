@@ -6,6 +6,7 @@ import {
   isNudgeDue,
   laneStamp,
   nextMorning,
+  nextWakeAt,
   nudgeAfterMove,
   STALE_DOING_MS,
 } from "./flow.ts";
@@ -87,5 +88,14 @@ describe("aging and nudges", () => {
     assert.equal(laneStamp(existing, "todo", now), 50);
     assert.equal(laneStamp(existing, "doing", now), now);
     assert.deepEqual(nudgeAfterMove(existing, "doing"), { nudgeAt: null, nudgeColumn: null });
+  });
+
+  it("picks the soonest future wake and ignores due or moved cards", () => {
+    const soon = card({ id: "a", nudgeAt: now + 10, nudgeColumn: "doing", column: "doing" });
+    const later = card({ id: "b", nudgeAt: now + 50, nudgeColumn: "doing", column: "doing" });
+    const past = card({ id: "c", nudgeAt: now - 1, nudgeColumn: "doing", column: "doing" });
+    const moved = card({ id: "d", nudgeAt: now + 5, nudgeColumn: "todo", column: "doing" });
+    assert.equal(nextWakeAt([soon, later, past, moved], now), now + 10);
+    assert.equal(nextWakeAt([past, moved], now), null);
   });
 });

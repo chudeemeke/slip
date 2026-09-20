@@ -9,6 +9,7 @@ import { Plus, Share, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cardsInColumn, visibleCount } from "@/lib/board/merge";
 import { dueNudgeCards } from "@/lib/board/flow";
+import { useMorningAlerts } from "@/lib/board/use-alerts";
 import { useBoardStore } from "@/lib/board/store";
 import { COLUMNS, COLUMN_INDEX, isColumnId, type Card, type ColumnId } from "@/lib/board/types";
 import { livePeers, useBoardSync } from "@/lib/board/use-sync";
@@ -54,6 +55,7 @@ export function Kanban({
   const upsertCard = useBoardStore((s) => s.upsertCard);
   const deleteCard = useBoardStore((s) => s.deleteCard);
   const moveCard = useBoardStore((s) => s.moveCard);
+  const alerts = useMorningAlerts(cards);
 
   const rootRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -501,6 +503,10 @@ export function Kanban({
         room={room}
         draftName={draftName}
         rows={rows}
+        alertsStatus={alerts.status}
+        alertsCaption={alerts.caption}
+        onAlertsEnable={() => void alerts.enable()}
+        onAlertsDisable={() => void alerts.disable()}
         onDraftName={setDraftName}
         onSaveName={() => {
           onRename(draftName);

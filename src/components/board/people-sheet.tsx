@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { avatarTone, initials } from "@/lib/board/avatar";
+import type { AlertsStatus } from "@/lib/board/alerts";
 import type { PresenceRow } from "@/lib/board/presence";
 import { cn } from "@/lib/utils";
 import { Sheet } from "./sheet";
@@ -12,6 +13,10 @@ export function PeopleSheet({
   room,
   draftName,
   rows,
+  alertsStatus,
+  alertsCaption,
+  onAlertsEnable,
+  onAlertsDisable,
   onDraftName,
   onSaveName,
   onShare,
@@ -22,12 +27,18 @@ export function PeopleSheet({
   room: string;
   draftName: string;
   rows: PresenceRow[];
+  alertsStatus: AlertsStatus;
+  alertsCaption: string;
+  onAlertsEnable: () => void;
+  onAlertsDisable: () => void;
   onDraftName: (name: string) => void;
   onSaveName: () => void;
   onShare: () => void;
   onLeave: () => void;
   onClose: () => void;
 }) {
+  const alertsOn = alertsStatus === "on";
+  const busy = alertsStatus === "busy";
   return (
     <Sheet open={open} onClose={onClose} labelledBy="people-title">
       <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-5 pb-6 pt-2">
@@ -55,6 +66,35 @@ export function PeopleSheet({
               Save
             </Button>
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Lock Screen</Label>
+          <div className="grid grid-cols-2 gap-1 rounded-lg bg-elevated p-1">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={onAlertsDisable}
+              className={cn(
+                "h-10 rounded-md text-sm font-medium transition-colors duration-150",
+                !alertsOn ? "bg-card text-fg shadow-[var(--shadow-card)]" : "text-muted",
+              )}
+            >
+              Off
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={onAlertsEnable}
+              className={cn(
+                "h-10 rounded-md text-sm font-medium transition-colors duration-150",
+                alertsOn ? "bg-card text-fg shadow-[var(--shadow-card)]" : "text-muted",
+              )}
+            >
+              On
+            </button>
+          </div>
+          <p className="text-caption text-subtle">{alertsCaption}</p>
         </div>
 
         <div className="space-y-2">

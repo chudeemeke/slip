@@ -10,11 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiPushRouteImport } from './routes/api/push'
 import { Route as ApiRtcRouteImport } from './routes/api/rtc'
+import { Route as ApiPushTickRouteImport } from './routes/api/push.tick'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPushRoute = ApiPushRouteImport.update({
+  id: '/api/push',
+  path: '/api/push',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiRtcRoute = ApiRtcRouteImport.update({
@@ -22,30 +29,42 @@ const ApiRtcRoute = ApiRtcRouteImport.update({
   path: '/api/rtc',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPushTickRoute = ApiPushTickRouteImport.update({
+  id: '/tick',
+  path: '/tick',
+  getParentRoute: () => ApiPushRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/push': typeof ApiPushRouteWithChildren
   '/api/rtc': typeof ApiRtcRoute
+  '/api/push/tick': typeof ApiPushTickRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/push': typeof ApiPushRouteWithChildren
   '/api/rtc': typeof ApiRtcRoute
+  '/api/push/tick': typeof ApiPushTickRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/push': typeof ApiPushRouteWithChildren
   '/api/rtc': typeof ApiRtcRoute
+  '/api/push/tick': typeof ApiPushTickRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/rtc'
+  fullPaths: '/' | '/api/push' | '/api/rtc' | '/api/push/tick'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/rtc'
-  id: '__root__' | '/' | '/api/rtc'
+  to: '/' | '/api/push' | '/api/rtc' | '/api/push/tick'
+  id: '__root__' | '/' | '/api/push' | '/api/rtc' | '/api/push/tick'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiPushRoute: typeof ApiPushRouteWithChildren
   ApiRtcRoute: typeof ApiRtcRoute
 }
 
@@ -58,6 +77,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/push': {
+      id: '/api/push'
+      path: '/api/push'
+      fullPath: '/api/push'
+      preLoaderRoute: typeof ApiPushRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/rtc': {
       id: '/api/rtc'
       path: '/api/rtc'
@@ -65,11 +91,30 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiRtcRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/push/tick': {
+      id: '/api/push/tick'
+      path: '/tick'
+      fullPath: '/api/push/tick'
+      preLoaderRoute: typeof ApiPushTickRouteImport
+      parentRoute: typeof ApiPushRoute
+    }
   }
 }
 
+interface ApiPushRouteChildren {
+  ApiPushTickRoute: typeof ApiPushTickRoute
+}
+
+const ApiPushRouteChildren: ApiPushRouteChildren = {
+  ApiPushTickRoute: ApiPushTickRoute,
+}
+
+const ApiPushRouteWithChildren =
+  ApiPushRoute._addFileChildren(ApiPushRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiPushRoute: ApiPushRouteWithChildren,
   ApiRtcRoute: ApiRtcRoute,
 }
 export const routeTree = rootRouteImport

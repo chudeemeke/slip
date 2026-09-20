@@ -28,6 +28,18 @@ export function dueNudgeCards(cards: Card[], now = Date.now()): Card[] {
   return cards.filter((c) => isNudgeDue(c, now));
 }
 
+/** Earliest future morning nudge still in its lane. */
+export function nextWakeAt(cards: Card[], now = Date.now()): number | null {
+  let min = Number.POSITIVE_INFINITY;
+  for (const card of cards) {
+    if (card.deleted || card.nudgeAt == null || card.nudgeColumn == null) continue;
+    if (card.nudgeAt > now && card.column === card.nudgeColumn) {
+      min = Math.min(min, card.nudgeAt);
+    }
+  }
+  return Number.isFinite(min) ? min : null;
+}
+
 export function nudgeChoice(card?: Card, now = Date.now()): NudgeChoice {
   if (!card?.nudgeAt || !card.nudgeColumn) return "off";
   if (card.nudgeAt > now && card.nudgeColumn === card.column) return "morning";

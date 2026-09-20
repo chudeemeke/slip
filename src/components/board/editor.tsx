@@ -143,7 +143,7 @@ export function EditorSheet({
           </div>
           <p className="text-caption text-subtle">
             {nudge === "morning"
-              ? "Nudge the next time you open Slip after 8:00, if this card has not moved."
+              ? "Nudge after 8:00 if this card has not moved — on the board, and on the Lock Screen if you allow alerts."
               : "No nudge. Cards in Doing quietly age on their own."}
           </p>
         </div>
