@@ -1,5 +1,5 @@
 /**
- * Lock-screen morning nudges. Stores only a Web Push endpoint and a wake time —
+ * Lock-screen morning nudges. Stores only a Web Push endpoint and wake times —
  * never card titles, names, or room codes. Unowned rows (auth is off).
  */
 import { getSql, type Sql } from "@/lib/db";
@@ -33,12 +33,16 @@ async function ensureSchema(sql: Sql): Promise<void> {
     );
     await sql.query(
       `CREATE TABLE IF NOT EXISTS nudge_wakes (
-         endpoint text PRIMARY KEY,
+         endpoint text NOT NULL,
          p256dh text NOT NULL,
          auth text NOT NULL,
          wake_at bigint NOT NULL,
          created_at timestamptz NOT NULL DEFAULT now()
        )`,
+    );
+    await sql.query(`ALTER TABLE nudge_wakes DROP CONSTRAINT IF EXISTS nudge_wakes_pkey`);
+    await sql.query(
+      `CREATE UNIQUE INDEX IF NOT EXISTS nudge_wakes_endpoint_wake ON nudge_wakes (endpoint, wake_at)`,
     );
     await sql.query(`CREATE INDEX IF NOT EXISTS nudge_wakes_due ON nudge_wakes (wake_at)`);
   })().catch((err) => {
@@ -71,28 +75,37 @@ export async function vapidPublicKey(): Promise<string> {
   return keys.public_key;
 }
 
-export async function upsertWake(input: {
+export async function replaceWakes(input: {
   endpoint: string;
   p256dh: string;
   auth: string;
-  wakeAt: number;
+  wakes: number[];
 }): Promise<{ ok: true } | { ok: false; error: string }> {
   const sql = await getSql();
   await ensureSchema(sql);
+  const unique = [...new Set(input.wakes)].filter((t) => Number.isFinite(t));
+  if (unique.length === 0) {
+    await sql.query(`DELETE FROM nudge_wakes WHERE endpoint = $1`, [input.endpoint]);
+    return { ok: true };
+  }
   const countRows = await sql.query<{ n: number }>(`SELECT count(*)::int AS n FROM nudge_wakes`);
-  const n = countRows[0]?.n ?? 0;
-  const exists = await sql.query<{ endpoint: string }>(
-    `SELECT endpoint FROM nudge_wakes WHERE endpoint = $1`,
+  const existing = await sql.query<{ n: number }>(
+    `SELECT count(*)::int AS n FROM nudge_wakes WHERE endpoint = $1`,
     [input.endpoint],
   );
-  if (!exists[0] && n >= MAX_WAKES) return { ok: false, error: "full" };
-  await sql.query(
-    `INSERT INTO nudge_wakes (endpoint, p256dh, auth, wake_at)
-     VALUES ($1, $2, $3, $4)
-     ON CONFLICT (endpoint)
-     DO UPDATE SET p256dh = EXCLUDED.p256dh, auth = EXCLUDED.auth, wake_at = EXCLUDED.wake_at`,
-    [input.endpoint, input.p256dh, input.auth, input.wakeAt],
-  );
+  const n = countRows[0]?.n ?? 0;
+  const mine = existing[0]?.n ?? 0;
+  if (n - mine + unique.length > MAX_WAKES) return { ok: false, error: "full" };
+
+  await sql.query(`DELETE FROM nudge_wakes WHERE endpoint = $1`, [input.endpoint]);
+  for (const wakeAt of unique) {
+    await sql.query(
+      `INSERT INTO nudge_wakes (endpoint, p256dh, auth, wake_at)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (endpoint, wake_at) DO NOTHING`,
+      [input.endpoint, input.p256dh, input.auth, wakeAt],
+    );
+  }
   return { ok: true };
 }
 
@@ -126,22 +139,30 @@ export async function flushDueNudges(now = Date.now()): Promise<{ sent: number }
   webpush.setVapidDetails(VAPID_SUBJECT, keys.public_key, keys.private_key);
   const payload = JSON.stringify({ title: "Slip", body: "A card is still here." });
 
+  const seen = new Set<string>();
   let sent = 0;
   for (const row of due) {
-    try {
-      await webpush.sendNotification(
-        { endpoint: row.endpoint, keys: { p256dh: row.p256dh, auth: row.auth } },
-        payload,
-        { TTL: 60 * 60, urgency: "normal" },
-      );
-      sent += 1;
-      await sql.query(`DELETE FROM nudge_wakes WHERE endpoint = $1`, [row.endpoint]);
-    } catch (err) {
-      const status = (err as { statusCode?: number }).statusCode;
-      if (status === 404 || status === 410 || status === 403) {
-        await sql.query(`DELETE FROM nudge_wakes WHERE endpoint = $1`, [row.endpoint]);
+    if (!seen.has(row.endpoint)) {
+      seen.add(row.endpoint);
+      try {
+        await webpush.sendNotification(
+          { endpoint: row.endpoint, keys: { p256dh: row.p256dh, auth: row.auth } },
+          payload,
+          { TTL: 60 * 60, urgency: "normal" },
+        );
+        sent += 1;
+      } catch (err) {
+        const status = (err as { statusCode?: number }).statusCode;
+        if (status === 404 || status === 410 || status === 403) {
+          await sql.query(`DELETE FROM nudge_wakes WHERE endpoint = $1`, [row.endpoint]);
+          continue;
+        }
       }
     }
+    await sql.query(`DELETE FROM nudge_wakes WHERE endpoint = $1 AND wake_at = $2`, [
+      row.endpoint,
+      row.wake_at,
+    ]);
   }
   return { sent };
 }

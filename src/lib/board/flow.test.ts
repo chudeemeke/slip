@@ -7,6 +7,7 @@ import {
   laneStamp,
   nextMorning,
   nextWakeAt,
+  futureWakeTimes,
   nudgeAfterMove,
   STALE_DOING_MS,
 } from "./flow.ts";
@@ -96,6 +97,7 @@ describe("aging and nudges", () => {
     const past = card({ id: "c", nudgeAt: now - 1, nudgeColumn: "doing", column: "doing" });
     const moved = card({ id: "d", nudgeAt: now + 5, nudgeColumn: "todo", column: "doing" });
     assert.equal(nextWakeAt([soon, later, past, moved], now), now + 10);
+    assert.deepEqual(futureWakeTimes([soon, later, past, moved], now), [now + 10, now + 50]);
     assert.equal(nextWakeAt([past, moved], now), null);
   });
 });

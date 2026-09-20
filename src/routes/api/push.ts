@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
-import { deleteWake, json, upsertWake, vapidPublicKey } from "@/lib/board/push.server";
+import { deleteWake, json, replaceWakes, vapidPublicKey } from "@/lib/board/push.server";
 
 const endpoint = z
   .string()
@@ -23,7 +23,7 @@ const postSchema = z.discriminatedUnion("op", [
     endpoint,
     p256dh: key,
     auth: key,
-    wakeAt: z.number().finite(),
+    wakes: z.array(z.number().finite()).max(50),
   }),
   z.object({
     op: z.literal("unsubscribe"),
@@ -53,12 +53,14 @@ async function handlePost({ request }: { request: Request }) {
 
   const now = Date.now();
   const max = now + 14 * 24 * 60 * 60 * 1000;
-  const wakeAt = Math.min(Math.max(parsed.data.wakeAt, now), max);
-  const result = await upsertWake({
+  const wakes = parsed.data.wakes
+    .map((t) => Math.min(Math.max(t, now), max))
+    .filter((t) => t > now);
+  const result = await replaceWakes({
     endpoint: parsed.data.endpoint,
     p256dh: parsed.data.p256dh,
     auth: parsed.data.auth,
-    wakeAt,
+    wakes,
   });
   if (!result.ok) return json({ error: result.error }, 503);
   return json({ ok: true });

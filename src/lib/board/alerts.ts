@@ -9,6 +9,11 @@ export function isStandalone(): boolean {
   return nav.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
 }
 
+export function isIosDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /iPad|iPhone|iPod/.test(navigator.userAgent);
+}
+
 export function alertsSupported(): boolean {
   return (
     typeof window !== "undefined" &&
@@ -16,6 +21,13 @@ export function alertsSupported(): boolean {
     "serviceWorker" in navigator &&
     "PushManager" in window
   );
+}
+
+/** iPhone only delivers Web Push from the Home Screen app. */
+export function alertsAvailableHere(): boolean {
+  if (!alertsSupported()) return false;
+  if (isIosDevice()) return isStandalone();
+  return window.isSecureContext;
 }
 
 export function loadAlertsEnabled(): boolean {
@@ -47,10 +59,10 @@ export async function registerSlipWorker(): Promise<ServiceWorkerRegistration> {
   return navigator.serviceWorker.register(SW_URL, { scope: "/" });
 }
 
-export async function syncPushSubscription(wakeAt: number | null): Promise<void> {
+export async function syncPushSubscription(wakes: number[]): Promise<void> {
   if (!alertsSupported()) return;
   const reg = await registerSlipWorker();
-  if (wakeAt == null) {
+  if (wakes.length === 0) {
     const existing = await reg.pushManager.getSubscription();
     if (existing) {
       const endpoint = existing.endpoint;
@@ -92,7 +104,7 @@ export async function syncPushSubscription(wakeAt: number | null): Promise<void>
       endpoint: sub.endpoint,
       p256dh,
       auth,
-      wakeAt,
+      wakes,
     }),
   });
 }
@@ -100,7 +112,7 @@ export async function syncPushSubscription(wakeAt: number | null): Promise<void>
 export function alertsCaption(status: AlertsStatus): string {
   switch (status) {
     case "on":
-      return "We'll ping after 8:00 if a morning card is still here. Titles stay on this phone.";
+      return "We'll ping the Lock Screen after 8:00 if a morning card is still here. Titles stay on this phone.";
     case "need-home":
       return "iPhone only delivers these from the Home Screen app, not from Safari. Share → Add to Home Screen, then open Slip from there.";
     case "blocked":
@@ -108,6 +120,6 @@ export function alertsCaption(status: AlertsStatus): string {
     case "busy":
       return "Turning alerts on…";
     default:
-      return "Ping after 8:00 if a morning card hasn't moved. Add Slip to your Home Screen first.";
+      return "Ping the Lock Screen after 8:00 if a morning card hasn't moved. Add Slip to your Home Screen first.";
   }
 }

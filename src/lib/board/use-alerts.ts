@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { nextWakeAt } from "./flow";
+import { futureWakeTimes } from "./flow";
 import {
+  alertsAvailableHere,
   alertsCaption,
   alertsSupported,
-  isStandalone,
   loadAlertsEnabled,
+  registerSlipWorker,
   saveAlertsEnabled,
   syncPushSubscription,
   type AlertsStatus,
@@ -16,18 +17,21 @@ export function useMorningAlerts(cards: Record<string, Card>) {
     loadAlertsEnabled() ? "on" : "off",
   );
   const enabled = status === "on";
-  const wakeAt = nextWakeAt(Object.values(cards));
+  const wakes = futureWakeTimes(Object.values(cards));
+  const wakeKey = wakes.join(",");
 
   useEffect(() => {
     if (!enabled) return;
-    void syncPushSubscription(wakeAt).catch(() => {
+    void syncPushSubscription(wakes).catch(() => {
       /* keep local flag; next open retries */
     });
-  }, [enabled, wakeAt]);
+    // wakeKey is the stable serial of `wakes`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, wakeKey]);
 
   const enable = useCallback(async () => {
-    if (!isStandalone() || !alertsSupported()) {
-      setStatus("need-home");
+    if (!alertsAvailableHere()) {
+      setStatus(alertsSupported() ? "need-home" : "blocked");
       return;
     }
     setStatus("busy");
@@ -38,12 +42,22 @@ export function useMorningAlerts(cards: Record<string, Card>) {
         setStatus("blocked");
         return;
       }
+      const nextWakes = futureWakeTimes(Object.values(cards));
       saveAlertsEnabled(true);
       setStatus("on");
-      await syncPushSubscription(nextWakeAt(Object.values(cards)));
+      const reg = await registerSlipWorker();
+      await syncPushSubscription(nextWakes);
+      await reg.showNotification("Slip", {
+        body: nextWakes.length
+          ? "We'll ping after 8:00 if that card is still here."
+          : "Turn on Morning on a card, and we'll ping after 8:00.",
+        tag: "slip-nudge-on",
+        icon: "/icon-192.png",
+        badge: "/icon-192.png",
+      });
     } catch {
       saveAlertsEnabled(false);
-      setStatus("need-home");
+      setStatus(alertsSupported() ? "need-home" : "blocked");
     }
   }, [cards]);
 
@@ -51,7 +65,7 @@ export function useMorningAlerts(cards: Record<string, Card>) {
     saveAlertsEnabled(false);
     setStatus("off");
     try {
-      await syncPushSubscription(null);
+      await syncPushSubscription([]);
     } catch {
       /* local off is enough */
     }

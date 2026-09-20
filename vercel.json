@@ -4,5 +4,14 @@
       "path": "/api/push/tick",
       "schedule": "*/15 * * * *"
     }
+  ],
+  "headers": [
+    {
+      "source": "/slip-sw.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "max-age=0, must-revalidate" },
+        { "key": "Service-Worker-Allowed", "value": "/" }
+      ]
+    }
   ]
 }
