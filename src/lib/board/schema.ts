@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { Card, Identity, PeerMsg } from "./types";
+import type { Card, ColumnId, Identity, PeerMsg } from "./types";
 
 export const TITLE_MAX = 200;
 export const DESC_MAX = 4000;
@@ -17,6 +17,9 @@ export const cardSchema = z
     deleted: z.boolean(),
     authorId: z.string().min(1).max(80),
     authorName: z.string().max(24),
+    laneAt: z.number().finite(),
+    nudgeAt: z.number().finite().nullable(),
+    nudgeColumn: columnId.nullable(),
   })
   .refine((card) => card.deleted || card.title.trim().length > 0, {
     message: "live cards need a title",
@@ -36,6 +39,9 @@ const peerMsgSchema = z.discriminatedUnion("t", [
 export function parseCard(input: unknown): Card | null {
   if (!input || typeof input !== "object") return null;
   const raw = input as Record<string, unknown>;
+  const updatedAt = typeof raw.updatedAt === "number" && Number.isFinite(raw.updatedAt) ? raw.updatedAt : 0;
+  const laneRaw = raw.laneAt;
+  const nudgeAtRaw = raw.nudgeAt;
   const result = cardSchema.safeParse({
     ...raw,
     title: typeof raw.title === "string" ? raw.title : "",
@@ -44,6 +50,14 @@ export function parseCard(input: unknown): Card | null {
     authorId: typeof raw.authorId === "string" && raw.authorId ? raw.authorId : "local",
     authorName:
       typeof raw.authorName === "string" && raw.authorName.trim() ? raw.authorName : "Guest",
+    laneAt:
+      typeof laneRaw === "number" && Number.isFinite(laneRaw) ? laneRaw : updatedAt,
+    nudgeAt:
+      typeof nudgeAtRaw === "number" && Number.isFinite(nudgeAtRaw) ? nudgeAtRaw : null,
+    nudgeColumn:
+      raw.nudgeColumn === "todo" || raw.nudgeColumn === "doing" || raw.nudgeColumn === "done"
+        ? (raw.nudgeColumn as ColumnId)
+        : null,
   });
   if (!result.success) return null;
   const card = result.data;

@@ -9,9 +9,12 @@ const valid = {
   column: "todo",
   rank: 1024,
   updatedAt: 10,
+  laneAt: 10,
   deleted: false,
   authorId: "u-1",
   authorName: "Ada",
+  nudgeAt: null,
+  nudgeColumn: null,
 };
 
 describe("parseCard", () => {
@@ -33,6 +36,13 @@ describe("parseCard", () => {
     const card = parseCard(rest);
     assert.equal(card?.authorName, "Guest");
     assert.equal(card?.authorId, "local");
+  });
+
+  it("falls back to updatedAt when laneAt is missing", () => {
+    const { laneAt: _l, ...rest } = valid;
+    const card = parseCard(rest);
+    assert.equal(card?.laneAt, 10);
+    assert.equal(card?.nudgeAt, null);
   });
 
   it("allows a tombstone with an empty title", () => {

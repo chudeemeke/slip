@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import { avatarTone, initials } from "@/lib/board/avatar";
+import { isDoingStale, isNudgeDue } from "@/lib/board/flow";
 import type { Card } from "@/lib/board/types";
 
 function compactTime(ts: number): string {
@@ -19,6 +20,8 @@ export function CardFace({
   lifted?: boolean;
   authorName?: string;
 }) {
+  const due = isNudgeDue(card);
+  const stale = isDoingStale(card);
   return (
     <article
       className={cn(
@@ -38,7 +41,13 @@ export function CardFace({
         >
           {initials(authorName ?? "You")}
         </span>
-        <span className="tabular-nums">{compactTime(card.updatedAt)}</span>
+        {due ? (
+          <span className="text-accent">Still here</span>
+        ) : stale ? (
+          <span>Still in Doing</span>
+        ) : (
+          <span className="tabular-nums">{compactTime(card.updatedAt)}</span>
+        )}
       </div>
     </article>
   );

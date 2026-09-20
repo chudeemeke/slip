@@ -19,9 +19,12 @@ function card(over: Partial<Card> & Pick<Card, "id">): Card {
     column: "todo",
     rank: RANK_GAP,
     updatedAt: 1,
+    laneAt: 1,
     deleted: false,
     authorId: "a",
     authorName: "Ada",
+    nudgeAt: null,
+    nudgeColumn: null,
     ...over,
   };
 }

@@ -8,6 +8,7 @@ import {
 import { Plus, Share, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cardsInColumn, visibleCount } from "@/lib/board/merge";
+import { dueNudgeCards } from "@/lib/board/flow";
 import { useBoardStore } from "@/lib/board/store";
 import { COLUMNS, COLUMN_INDEX, isColumnId, type Card, type ColumnId } from "@/lib/board/types";
 import { livePeers, useBoardSync } from "@/lib/board/use-sync";
@@ -73,6 +74,15 @@ export function Kanban({
   const [peopleOpen, setPeopleOpen] = useState(false);
   const [draftName, setDraftName] = useState(name);
   const [blockFab, setBlockFab] = useState(false);
+  const nudgedRoom = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (nudgedRoom.current === room) return;
+    nudgedRoom.current = room;
+    const due = dueNudgeCards(Object.values(useBoardStore.getState().cards));
+    if (due.length === 1) onNotify(`Still here: ${due[0]!.title}`);
+    else if (due.length > 1) onNotify(`${due.length} still waiting`);
+  }, [room, onNotify]);
 
   useEffect(() => {
     if (editor) {

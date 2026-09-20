@@ -10,6 +10,7 @@ import {
   rankAt,
   rebalanceRanks,
 } from "./merge";
+import { applyNudge, laneStamp, nudgeAfterMove, type NudgeChoice } from "./flow";
 import {
   ensureIdentity,
   loadBoard,
@@ -41,6 +42,7 @@ type BoardStore = {
     title: string;
     description: string;
     column: ColumnId;
+    nudge: NudgeChoice;
   }) => Card | null;
   deleteCard: (id: string) => Card | null;
   moveCard: (id: string, column: ColumnId, index: number) => Card[];
@@ -139,12 +141,13 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
     persist();
   },
 
-  upsertCard: ({ id, title, description, column }) => {
+  upsertCard: ({ id, title, description, column, nudge }) => {
     const trimmedTitle = title.trim();
     if (!trimmedTitle) return null;
     const identity = get().identity;
     const existing = id ? get().cards[id] : undefined;
     const list = cardsInColumn(get().cards, column);
+    const now = tick();
     const card: Card = {
       id: existing?.id ?? entityId("c"),
       title: trimmedTitle.slice(0, 200),
@@ -154,10 +157,12 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
         existing && existing.column === column
           ? existing.rank
           : rankAt(list.at(-1)?.rank),
-      updatedAt: tick(),
+      updatedAt: now,
+      laneAt: laneStamp(existing, column, now),
       deleted: false,
       authorId: identity?.id ?? existing?.authorId ?? "local",
       authorName: identity?.name ?? existing?.authorName ?? "Guest",
+      ...applyNudge(nudge, column, existing, now),
     };
     set({ cards: { ...get().cards, [card.id]: card } });
     persist();
@@ -197,6 +202,12 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
           column,
           rank: ranks[item.id]!,
           deleted: false,
+          ...(item.id === id
+            ? {
+                laneAt: laneStamp(existing, column, tick()),
+                ...nudgeAfterMove(existing, column),
+              }
+            : {}),
           ...stamp(item, item.id === id ? identity : { id: item.authorId, name: item.authorName }),
         };
         next[item.id] = card;
@@ -207,11 +218,14 @@ export const useBoardStore = create<BoardStore>((set, get) => ({
       return touched;
     }
 
+    const movedAt = tick();
     const card: Card = {
       ...existing,
       column,
       rank: rankAt(before, after),
       deleted: false,
+      laneAt: laneStamp(existing, column, movedAt),
+      ...nudgeAfterMove(existing, column),
       ...stamp(existing, identity),
     };
     set({ cards: { ...get().cards, [id]: card } });

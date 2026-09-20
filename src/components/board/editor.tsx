@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { nudgeChoice, type NudgeChoice } from "@/lib/board/flow";
 import { COLUMNS, type Card, type ColumnId } from "@/lib/board/types";
 import { cn } from "@/lib/utils";
 import { Sheet } from "./sheet";
@@ -26,6 +27,7 @@ export function EditorSheet({
     title: string;
     description: string;
     column: ColumnId;
+    nudge: NudgeChoice;
   }) => void;
   onDelete: (id: string) => void;
 }) {
@@ -33,6 +35,7 @@ export function EditorSheet({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [column, setColumn] = useState<ColumnId>("todo");
+  const [nudge, setNudge] = useState<NudgeChoice>("off");
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
@@ -41,10 +44,12 @@ export function EditorSheet({
       setTitle(state.card.title);
       setDescription(state.card.description);
       setColumn(state.card.column);
+      setNudge(nudgeChoice(state.card));
     } else {
       setTitle("");
       setDescription("");
       setColumn(state.column);
+      setNudge("off");
     }
     setConfirmDelete(false);
   }, [state]);
@@ -63,6 +68,7 @@ export function EditorSheet({
             title,
             description,
             column,
+            nudge,
           });
         }}
       >
@@ -111,6 +117,35 @@ export function EditorSheet({
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>If still here</Label>
+          <div className="grid grid-cols-2 gap-1 rounded-lg bg-elevated p-1">
+            {(
+              [
+                { id: "off", label: "Off" },
+                { id: "morning", label: "Morning" },
+              ] as const
+            ).map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setNudge(opt.id)}
+                className={cn(
+                  "h-10 rounded-md text-sm font-medium transition-colors duration-150",
+                  nudge === opt.id ? "bg-card text-fg shadow-[var(--shadow-card)]" : "text-muted",
+                )}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-caption text-subtle">
+            {nudge === "morning"
+              ? "Nudge the next time you open Slip after 8:00, if this card has not moved."
+              : "No nudge. Cards in Doing quietly age on their own."}
+          </p>
         </div>
 
         <div className="mt-2 flex flex-col gap-2">

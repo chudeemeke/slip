@@ -13,9 +13,12 @@ export type Card = {
   column: ColumnId;
   rank: number;
   updatedAt: number;
+  laneAt: number;
   deleted: boolean;
   authorId: string;
   authorName: string;
+  nudgeAt: number | null;
+  nudgeColumn: ColumnId | null;
 };
 
 export type Identity = {

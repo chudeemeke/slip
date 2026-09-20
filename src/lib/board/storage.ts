@@ -119,39 +119,51 @@ export function saveBoard(room: string, cards: Record<string, Card>): Record<str
 }
 
 export function sampleCards(authorId: string, authorName: string): Record<string, Card> {
-  const seed: Array<Omit<Card, "id" | "updatedAt" | "deleted" | "authorId" | "authorName">> = [
-    {
-      title: "Pack snacks for the picnic",
-      description: "Fruit, water, and the checkered blanket.",
-      column: "todo",
-      rank: 1024,
-    },
-    {
-      title: "Return the library books",
-      description: "They are due Friday — the stack by the door.",
-      column: "todo",
-      rank: 2048,
-    },
-    {
-      title: "Practice piano for 20 minutes",
-      description: "The river étude, slow then up to tempo.",
-      column: "doing",
-      rank: 1024,
-    },
-    {
-      title: "Hang the new prints",
-      description: "Two frames in the hallway, level and 60 inches on center.",
-      column: "done",
-      rank: 1024,
-    },
-  ];
+  const seed: Array<Omit<Card, "id" | "updatedAt" | "deleted" | "authorId" | "authorName" | "laneAt">> =
+    [
+      {
+        title: "Pack snacks for the picnic",
+        description: "Fruit, water, and the checkered blanket.",
+        column: "todo",
+        rank: 1024,
+        nudgeAt: null,
+        nudgeColumn: null,
+      },
+      {
+        title: "Return the library books",
+        description: "They are due Friday — the stack by the door.",
+        column: "todo",
+        rank: 2048,
+        nudgeAt: null,
+        nudgeColumn: null,
+      },
+      {
+        title: "Practice piano for 20 minutes",
+        description: "The river étude, slow then up to tempo.",
+        column: "doing",
+        rank: 1024,
+        nudgeAt: null,
+        nudgeColumn: null,
+      },
+      {
+        title: "Hang the new prints",
+        description: "Two frames in the hallway, level and 60 inches on center.",
+        column: "done",
+        rank: 1024,
+        nudgeAt: null,
+        nudgeColumn: null,
+      },
+    ];
   const cards: Record<string, Card> = {};
   seed.forEach((item) => {
     const id = entityId("c");
+    const now = tick();
+    const laneAt = item.column === "doing" ? now - 13 * 60 * 60 * 1000 : now;
     cards[id] = {
       ...item,
       id,
-      updatedAt: tick(),
+      updatedAt: now,
+      laneAt,
       deleted: false,
       authorId,
       authorName,
